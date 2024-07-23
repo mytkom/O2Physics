@@ -183,7 +183,7 @@ struct PidONNXModel {
 
     std::vector<float> inputValues{scaledTPCSignal};
 
-    if ((track.trdSignal() - kTRDMissingSignal) > kEpsilon) {
+    if (TMath::Abs(track.trdSignal() - kTRDMissingSignal) >= kEpsilon) {
       float scaledTRDSignal = (track.trdSignal() - mScalingParams.at("fTRDSignal").first) / mScalingParams.at("fTRDSignal").second;
       inputValues.push_back(scaledTRDSignal);
       inputValues.push_back(track.trdPattern());
@@ -192,7 +192,7 @@ struct PidONNXModel {
       inputValues.push_back(std::numeric_limits<float>::quiet_NaN());
     }
 
-    if ((track.tofSignal() - kTOFMissingSignal) > kEpsilon) {
+    if (TMath::Abs(track.tofSignal() - kTOFMissingSignal) >= kEpsilon) {
       float scaledTOFSignal = (track.tofSignal() - mScalingParams.at("fTOFSignal").first) / mScalingParams.at("fTOFSignal").second;
       float scaledBeta = (track.beta() - mScalingParams.at("fBeta").first) / mScalingParams.at("fBeta").second;
       inputValues.push_back(scaledTOFSignal);

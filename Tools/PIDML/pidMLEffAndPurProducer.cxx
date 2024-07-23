@@ -12,7 +12,7 @@
 /// \file mlModelGenHists
 /// \brief Generate momentum TH1Fs for mlAccepted mcParticles by ML model and for MC mcParticles.
 ///
-/// \author Michał Olędzki <michal.oledzki.stud@pw.edu.pl>
+/// \author Michał Olędzki <m.oledzki@cern.ch>
 /// \author Marek Mytkowski <marek.mytkowski@cern.ch>
 
 #include <string>
@@ -100,7 +100,7 @@ struct PidMlEffAndPurProducer {
     if (track.sign() != sign)
       return false;
 
-    if (track.pt() <= cfgTofPtCut || (track.tofSignal() - kTOFMissingSignal) < kEpsilon) {
+    if (track.pt() < cfgTofPtCut || TMath::Abs(track.tofSignal() - kTOFMissingSignal) < kEpsilon) {
       if (TMath::Abs(nSigma.tpc) >= cfgNSigmaCut)
         return false;
     } else {

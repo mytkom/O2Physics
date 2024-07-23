@@ -10,11 +10,11 @@
 // or submit itself to any jurisdiction.
 
 /// \file pidMLBatchEffAndPurProducer
-/// \brief Batch PID execution task. It produces derived data needed for ROOT script which
+/// \brief Batch PID execution task. It produces derived data needed for ROOT script, which
 /// generates efficiency (recall) and purity (precision) analysis of ML Model PID
 ///
-/// \author Michał Olędzki <mioledzk@cern.ch>
-/// \author Marek Mytkowski <mmytkows@cern.ch>
+/// \author Michał Olędzki <m.oledzki@cern.ch>
+/// \author Marek Mytkowski <marek.mytkowski@cern.ch>
 
 #include <string_view>
 
@@ -52,17 +52,17 @@ struct PidMlBatchEffAndPurProducer {
   HistogramRegistry histos{"histos", {}, OutputObjHandlingPolicy::AnalysisObject};
 
   int currentRunNumber = -1;
-  static constexpr float eps = 1e-10;
-  static constexpr float etaCut = 0.8f;
-  static constexpr float nSigmaTofPtCut = 0.5f;
-  static constexpr float tofMissing = -999.0f;
-  static constexpr int nPids = 6;
-  static constexpr int pids[nPids] = {211, 321, 2212, -211, -321, -2212};
+  static constexpr float kEpsilon = 1e-10;
+  static constexpr float kEtaCut = 0.8f;
+  static constexpr float kNSigmaTofPtCut = 0.5f;
+  static constexpr float kTofMissing = -999.0f;
+  static constexpr int kNPids = 6;
+  static constexpr int kPids[kNPids] = {211, 321, 2212, -211, -321, -2212};
 
   o2::ccdb::CcdbApi ccdbApi;
   std::vector<PidONNXModel> models;
 
-  Configurable<std::vector<int>> cfgPids{"pids", std::vector<int>(pids, pids + nPids), "PIDs to predict"};
+  Configurable<std::vector<int>> cfgPids{"kPids", std::vector<int>(kPids, kPids + kNPids), "PIDs to predict"};
 
   Configurable<std::string> cfgPathCCDB{"ccdb-path", "Users/m/mkabus/PIDML", "base path to the CCDB directory with ONNX models"};
   Configurable<std::string> cfgCCDBURL{"ccdb-url", "http://alice-ccdb.cern.ch", "URL of the CCDB repository"};
@@ -72,7 +72,7 @@ struct PidMlBatchEffAndPurProducer {
   Configurable<bool> cfgUseFixedTimestamp{"use-fixed-timestamp", false, "Whether to use fixed timestamp from configurable instead of timestamp calculated from the data"};
   Configurable<uint64_t> cfgTimestamp{"timestamp", 1524176895000, "Hardcoded timestamp for tests"};
 
-  static constexpr std::string_view mcTrackedHistLabels[nPids] = {
+  static constexpr std::string_view mcTrackedHistLabels[kNPids] = {
     "211/hPtMCTracked",
     "321/hPtMCTracked",
     "2212/hPtMCTracked",
@@ -85,7 +85,7 @@ struct PidMlBatchEffAndPurProducer {
     histos.fill(HIST(mcTrackedHistLabels[i]), track.pt());
   }
 
-  static constexpr std::string_view mcPositiveHistLabels[nPids] = {
+  static constexpr std::string_view mcPositiveHistLabels[kNPids] = {
     "211/hPtMCPositive",
     "321/hPtMCPositive",
     "2212/hPtMCPositive",
@@ -102,22 +102,22 @@ struct PidMlBatchEffAndPurProducer {
   void fillMcParticlePositiveHist(const T& mcPart)
   {
     switch (mcPart.pdgCode()) {
-      case pids[0]:
+      case kPids[0]:
         fillMcParticlePositiveHistos<0>(mcPart);
         break;
-      case pids[1]:
+      case kPids[1]:
         fillMcParticlePositiveHistos<1>(mcPart);
         break;
-      case pids[2]:
+      case kPids[2]:
         fillMcParticlePositiveHistos<2>(mcPart);
         break;
-      case pids[3]:
+      case kPids[3]:
         fillMcParticlePositiveHistos<3>(mcPart);
         break;
-      case pids[4]:
+      case kPids[4]:
         fillMcParticlePositiveHistos<4>(mcPart);
         break;
-      case pids[5]:
+      case kPids[5]:
         fillMcParticlePositiveHistos<5>(mcPart);
         break;
       default:
@@ -129,22 +129,22 @@ struct PidMlBatchEffAndPurProducer {
   void fillMcParticleTrackedHist(const T& track, int pdgCode)
   {
     switch (pdgCode) {
-      case pids[0]:
+      case kPids[0]:
         fillMcParticleTrackedHistos<0>(track);
         break;
-      case pids[1]:
+      case kPids[1]:
         fillMcParticleTrackedHistos<1>(track);
         break;
-      case pids[2]:
+      case kPids[2]:
         fillMcParticleTrackedHistos<2>(track);
         break;
-      case pids[3]:
+      case kPids[3]:
         fillMcParticleTrackedHistos<3>(track);
         break;
-      case pids[4]:
+      case kPids[4]:
         fillMcParticleTrackedHistos<4>(track);
         break;
-      case pids[5]:
+      case kPids[5]:
         fillMcParticleTrackedHistos<5>(track);
         break;
       default:
@@ -162,7 +162,7 @@ struct PidMlBatchEffAndPurProducer {
     const AxisSpec axisPt{50, 0, 3.1, "pt"};
 
     // Monte Carlo Model Simulation Tracking and PID truth info
-    for (int i = 0; i < nPids; ++i) {
+    for (int i = 0; i < kNPids; ++i) {
       histos.add(mcTrackedHistLabels[i].data(), mcTrackedHistLabels[i].data(), kTH1F, {axisPt});
       histos.add(mcPositiveHistLabels[i].data(), mcPositiveHistLabels[i].data(), kTH1F, {axisPt});
     }
@@ -205,7 +205,7 @@ struct PidMlBatchEffAndPurProducer {
         break;
     }
 
-    if (track.pt() < nSigmaTofPtCut || (track.tofSignal() - tofMissing) < eps) {
+    if (track.pt() < kNSigmaTofPtCut || TMath::Abs(track.tofSignal() - kTofMissing) < kEpsilon) {
       nSigma.composed = TMath::Abs(nSigma.tpc);
     } else {
       nSigma.composed = TMath::Hypot(nSigma.tof, nSigma.tpc);
@@ -235,7 +235,7 @@ struct PidMlBatchEffAndPurProducer {
 
     for (auto& mcPart : mcParticles) {
       // eta cut is done in requireGlobalTrackInFilter() so we cut it only here
-      if (mcPart.isPhysicalPrimary() && TMath::Abs(mcPart.eta()) < etaCut) {
+      if (mcPart.isPhysicalPrimary() && TMath::Abs(mcPart.eta()) < kEtaCut) {
         fillMcParticlePositiveHist(mcPart);
       }
     }
