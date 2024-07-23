@@ -15,6 +15,8 @@
 /// \author Michał Olędzki <michal.oledzki.stud@pw.edu.pl>
 /// \author Marek Mytkowski <marek.mytkowski@cern.ch>
 
+#include <string>
+
 #include <Framework/AnalysisDataModel.h>
 #include "Framework/runDataProcessing.h"
 #include "Framework/AnalysisTask.h"
@@ -22,8 +24,6 @@
 #include "Common/DataModel/TrackSelectionTables.h"
 #include "Common/DataModel/PIDResponse.h"
 #include "Tools/PIDML/pidOnnxModel.h"
-
-#include <string>
 
 using namespace o2;
 using namespace o2::framework;
