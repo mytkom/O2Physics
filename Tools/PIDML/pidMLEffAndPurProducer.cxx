@@ -57,9 +57,9 @@ struct PidMlEffAndPurProducer {
   Filter trackFilter = requireGlobalTrackInFilter();
 
   using BigTracks = soa::Filtered<soa::Join<aod::FullTracks, aod::TracksDCA, aod::pidTOFbeta, aod::TrackSelection, aod::TOFSignal, aod::McTrackLabels,
-    aod::pidTPCFullPi, aod::pidTPCFullKa, aod::pidTPCFullPr, aod::pidTPCFullEl, aod::pidTPCFullMu, 
+    aod::pidTPCFullPi, aod::pidTPCFullKa, aod::pidTPCFullPr, aod::pidTPCFullEl, aod::pidTPCFullMu,
     aod::pidTOFFullPi, aod::pidTOFFullKa, aod::pidTOFFullPr, aod::pidTOFFullEl, aod::pidTOFFullMu>>;
-  
+
   typedef struct nSigma_t {
     double tpc, tof;
   } nSigma_t;
@@ -174,7 +174,7 @@ struct PidMlEffAndPurProducer {
             histos.fill(HIST("full/hPtTPCNSigma"), track.pt(), nSigma.tpc);
             histos.fill(HIST("hPtMCTracked"), track.pt());
           }
-          
+
           histos.fill(HIST("full/hPtTOFBeta"), track.pt(), track.beta());
           histos.fill(HIST("full/hPtTPCSignal"), track.pt(), track.tpcSignal());
 
