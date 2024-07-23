@@ -90,9 +90,9 @@ struct PidONNXInterface {
   {
     for (std::size_t i = 0; i < mNPids; i++) {
       if (mModels[i].mPid == pid) {
-          if (track.pt() >= mPTLimits[i]) {
-            return mModels[i].applyModelBoolean(track);
-          }
+        if (track.pt() >= mPTLimits[i]) {
+          return mModels[i].applyModelBoolean(track);
+        }
       }
     }
     LOG(error) << "No suitable PID ML model found for track: " << track.globalIndex() << " from collision: " << track.collision().globalIndex() << " and expected pid: " << pid;

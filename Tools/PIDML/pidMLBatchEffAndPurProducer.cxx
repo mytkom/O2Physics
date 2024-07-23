@@ -38,7 +38,7 @@ DECLARE_SOA_INDEX_COLUMN(Track, track);              //! Track index
 DECLARE_SOA_COLUMN(Pid, pid, int);                   //! PDG particle ID to be tested by the model
 DECLARE_SOA_COLUMN(Pt, pt, float);                   //! particle's pt
 DECLARE_SOA_COLUMN(MlCertainty, mlCertainty, float); //! Machine learning model certainty value for track and pid
-DECLARE_SOA_COLUMN(NSigma, nSigma, float);     //! nSigma value for track and pid
+DECLARE_SOA_COLUMN(NSigma, nSigma, float);           //! nSigma value for track and pid
 DECLARE_SOA_COLUMN(IsPidMC, isPidMc, bool);          //! Is track's mcParticle recognized as "Pid"
 } // namespace effandpurpidresult
 
@@ -205,14 +205,14 @@ struct PidMlBatchEffAndPurProducer {
         break;
     }
 
-    if(track.pt() < nSigmaTofPtCut || (track.tofSignal() - tofMissing) < eps) {
+    if (track.pt() < nSigmaTofPtCut || (track.tofSignal() - tofMissing) < eps) {
       nSigma.composed = TMath::Abs(nSigma.tpc);
     } else {
       nSigma.composed = TMath::Hypot(nSigma.tof, nSigma.tpc);
     }
 
     int sign = cfgPid > 0 ? 1 : -1;
-    if(sign != track.sign()) {
+    if (sign != track.sign()) {
       nSigma.composed = std::numeric_limits<float>::max();
     }
 

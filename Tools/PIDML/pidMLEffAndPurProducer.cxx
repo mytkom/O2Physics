@@ -57,17 +57,18 @@ struct PidMlEffAndPurProducer {
   Filter trackFilter = requireGlobalTrackInFilter();
 
   using BigTracks = soa::Filtered<soa::Join<aod::FullTracks, aod::TracksDCA, aod::pidTOFbeta, aod::TrackSelection, aod::TOFSignal, aod::McTrackLabels,
-    aod::pidTPCFullPi, aod::pidTPCFullKa, aod::pidTPCFullPr, aod::pidTPCFullEl, aod::pidTPCFullMu, 
-    aod::pidTOFFullPi, aod::pidTOFFullKa, aod::pidTOFFullPr, aod::pidTOFFullEl, aod::pidTOFFullMu>>;
-  
+                                            aod::pidTPCFullPi, aod::pidTPCFullKa, aod::pidTPCFullPr, aod::pidTPCFullEl, aod::pidTPCFullMu,
+                                            aod::pidTOFFullPi, aod::pidTOFFullKa, aod::pidTOFFullPr, aod::pidTOFFullEl, aod::pidTOFFullMu>>;
+
   typedef struct nSigma_t {
     double tpc, tof;
   } nSigma_t;
 
-  nSigma_t GetNSigma(const BigTracks::iterator &track) {
+  nSigma_t GetNSigma(const BigTracks::iterator& track)
+  {
     nSigma_t nSigma;
 
-    switch(TMath::Abs(cfgPid)) {
+    switch (TMath::Abs(cfgPid)) {
       case 11: // electron
         nSigma.tof = track.tofNSigmaEl();
         nSigma.tpc = track.tpcNSigmaEl();
@@ -93,9 +94,11 @@ struct PidMlEffAndPurProducer {
     return nSigma;
   }
 
-  bool IsNSigmaAccept(const BigTracks::iterator &track, nSigma_t &nSigma) {
+  bool IsNSigmaAccept(const BigTracks::iterator& track, nSigma_t& nSigma)
+  {
     int sign = cfgPid > 0 ? 1 : -1;
-    if(track.sign() != sign) return false;
+    if (track.sign() != sign)
+      return false;
 
     if (track.pt() <= cfgTofPtCut || (track.tofSignal() - kTOFMissingSignal) < kEpsilon) {
       if (TMath::Abs(nSigma.tpc) >= cfgNSigmaCut)
@@ -108,12 +111,13 @@ struct PidMlEffAndPurProducer {
     return true;
   }
 
-  void init(InitContext const&) {
+  void init(InitContext const&)
+  {
     if (cfgUseCCDB) {
       ccdbApi.init(cfgCCDBURL);
     } else {
       pidModel = PidONNXModel(cfgPathLocal.value, cfgPathCCDB.value, cfgUseCCDB.value,
-          ccdbApi, -1, cfgPid.value, cfgCertainty.value);
+                              ccdbApi, -1, cfgPid.value, cfgCertainty.value);
     }
 
     const AxisSpec axisPt{100, 0, 5.0, "pt"};
@@ -143,53 +147,54 @@ struct PidMlEffAndPurProducer {
     histos.add("hPtTPCNSigma", "hPtTPCNSigma", kTH2F, {axisPt, axisNSigma});
   }
 
-  void process(aod::Collisions const& collisions, BigTracks const& tracks, aod::BCsWithTimestamps const&, aod::McParticles const& mcParticles) {
+  void process(aod::Collisions const& collisions, BigTracks const& tracks, aod::BCsWithTimestamps const&, aod::McParticles const& mcParticles)
+  {
     auto bc = collisions.iteratorAt(0).bc_as<aod::BCsWithTimestamps>();
     if (cfgUseCCDB && bc.runNumber() != currentRunNumber) {
       uint64_t timestamp = cfgUseFixedTimestamp ? cfgTimestamp.value : bc.timestamp();
       pidModel = PidONNXModel(cfgPathLocal.value, cfgPathCCDB.value, cfgUseCCDB.value,
-          ccdbApi, timestamp, cfgPid.value, cfgCertainty.value);
+                              ccdbApi, timestamp, cfgPid.value, cfgCertainty.value);
     }
 
     for (auto& mcPart : mcParticles) {
       // eta cut is included in requireGlobalTrackInFilter() so we cut it only here
-      if(mcPart.isPhysicalPrimary() && TMath::Abs(mcPart.eta()) < kEtaCut && mcPart.pdgCode() == pidModel.mPid) {
+      if (mcPart.isPhysicalPrimary() && TMath::Abs(mcPart.eta()) < kEtaCut && mcPart.pdgCode() == pidModel.mPid) {
         histos.fill(HIST("hPtMCPositive"), mcPart.pt());
       }
     }
 
     for (auto& track : tracks) {
-      if(track.has_mcParticle()) {
+      if (track.has_mcParticle()) {
         auto mcPart = track.mcParticle();
-        if(mcPart.isPhysicalPrimary()) {
+        if (mcPart.isPhysicalPrimary()) {
           bool mlAccepted = pidModel.applyModelBoolean(track);
           nSigma_t nSigma = GetNSigma(track);
           bool nSigmaAccepted = IsNSigmaAccept(track, nSigma);
 
           LOGF(info, "collision id: %d track id: %d mlAccepted: %d nSigmaAccepted: %d p: %.3f; x: %.3f, y: %.3f, z: %.3f",
-              track.collisionId(), track.index(), mlAccepted, nSigmaAccepted, track.p(), track.x(), track.y(), track.z());
+               track.collisionId(), track.index(), mlAccepted, nSigmaAccepted, track.p(), track.x(), track.y(), track.z());
 
-          if(mcPart.pdgCode() == pidModel.mPid) {
+          if (mcPart.pdgCode() == pidModel.mPid) {
             histos.fill(HIST("full/hPtTOFNSigma"), track.pt(), nSigma.tof);
             histos.fill(HIST("full/hPtTPCNSigma"), track.pt(), nSigma.tpc);
             histos.fill(HIST("hPtMCTracked"), track.pt());
           }
-          
+
           histos.fill(HIST("full/hPtTOFBeta"), track.pt(), track.beta());
           histos.fill(HIST("full/hPtTPCSignal"), track.pt(), track.tpcSignal());
 
-          if(mlAccepted) {
-            if(mcPart.pdgCode() == pidModel.mPid) {
+          if (mlAccepted) {
+            if (mcPart.pdgCode() == pidModel.mPid) {
               histos.fill(HIST("hPtMLTruePositive"), track.pt());
             }
             histos.fill(HIST("hPtMLPositive"), track.pt());
           }
 
-          if(nSigmaAccepted) {
+          if (nSigmaAccepted) {
             histos.fill(HIST("hPtTOFNSigma"), track.pt(), nSigma.tof);
             histos.fill(HIST("hPtTPCNSigma"), track.pt(), nSigma.tpc);
 
-            if(mcPart.pdgCode() == pidModel.mPid) {
+            if (mcPart.pdgCode() == pidModel.mPid) {
               histos.fill(HIST("hPtNSigmaTruePositive"), track.pt());
             }
             histos.fill(HIST("hPtNSigmaPositive"), track.pt());
@@ -200,7 +205,8 @@ struct PidMlEffAndPurProducer {
   }
 };
 
-WorkflowSpec defineDataProcessing(ConfigContext const& cfgc) {
+WorkflowSpec defineDataProcessing(ConfigContext const& cfgc)
+{
   return WorkflowSpec{
     adaptAnalysisTask<PidMlEffAndPurProducer>(cfgc)};
 }
