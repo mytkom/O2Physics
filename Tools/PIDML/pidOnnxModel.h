@@ -17,6 +17,7 @@
 #ifndef TOOLS_PIDML_PIDONNXMODEL_H_
 #define TOOLS_PIDML_PIDONNXMODEL_H_
 
+#include <cstddef>
 #include <cstdint>
 #include <limits>
 #include <string>
@@ -60,7 +61,7 @@ struct PidONNXModel {
     loadInputFiles(localPath, ccdbPath, useCCDB, ccdbApi, timestamp, pid, modelFile);
 
     Ort::SessionOptions sessionOptions;
-    mEnv = std::make_shared<Ort::Env>(ORT_LOGGING_LEVEL_WARNING, "pid-onnx-inferer");
+    mEnv = std::make_shared<Ort::Env>(ORT_LOGGING_LEVEL_VERBOSE, "pid-onnx-inferer");
     LOG(info) << "Loading ONNX model from file: " << modelFile;
     mSession.reset(new Ort::Experimental::Session{*mEnv, modelFile, sessionOptions});
     LOG(info) << "ONNX model loaded";
@@ -70,14 +71,14 @@ struct PidONNXModel {
     mOutputNames = mSession->GetOutputNames();
     mOutputShapes = mSession->GetOutputShapes();
 
-    LOG(debug) << "Input Node Name/Shape (" << mInputNames.size() << "):";
+    LOG(info) << "Input Node Name/Shape (" << mInputNames.size() << "):";
     for (size_t i = 0; i < mInputNames.size(); i++) {
-      LOG(debug) << "\t" << mInputNames[i] << " : " << printShape(mInputShapes[i]);
+      LOG(info) << "\t" << mInputNames[i] << " : " << printShape(mInputShapes[i]);
     }
 
-    LOG(debug) << "Output Node Name/Shape (" << mOutputNames.size() << "):";
+    LOG(info) << "Output Node Name/Shape (" << mOutputNames.size() << "):";
     for (size_t i = 0; i < mOutputNames.size(); i++) {
-      LOG(debug) << "\t" << mOutputNames[i] << " : " << printShape(mOutputShapes[i]);
+      LOG(info) << "\t" << mOutputNames[i] << " : " << printShape(mOutputShapes[i]);
     }
 
     // Assume model has 1 input node and 1 output node.
@@ -174,33 +175,50 @@ struct PidONNXModel {
   static constexpr float kEpsilon = 1e-10f;
 
   template <typename T>
-  std::vector<float> createInputsSingle(const T& track)
+  std::vector<std::vector<float>> createInputsSingle(const T& track)
   {
     // TODO: Hardcoded for now. Planning to implement RowView extension to get runtime access to selected columns
     // sign is short, trackType and tpcNClsShared uint8_t
 
+    std::vector<std::vector<float>> inputValues;
+
     float scaledTPCSignal = (track.tpcSignal() - mScalingParams.at("fTPCSignal").first) / mScalingParams.at("fTPCSignal").second;
 
-    std::vector<float> inputValues{scaledTPCSignal};
+    inputValues.emplace_back(constructFeatureVector(0, scaledTPCSignal));
+
 
     if (TMath::Abs(track.trdSignal() - kTRDMissingSignal) >= kEpsilon) {
       float scaledTRDSignal = (track.trdSignal() - mScalingParams.at("fTRDSignal").first) / mScalingParams.at("fTRDSignal").second;
-      inputValues.push_back(scaledTRDSignal);
-      inputValues.push_back(track.trdPattern());
-    } else {
-      inputValues.push_back(std::numeric_limits<float>::quiet_NaN());
-      inputValues.push_back(std::numeric_limits<float>::quiet_NaN());
+      // inputValues.push_back(scaledTRDSignal);
+      // inputValues.push_back(track.trdPattern());
+      std::cout << "WITH_TRD" << std::endl;
+      inputValues.emplace_back(constructFeatureVector(1, scaledTRDSignal));
+      inputValues.emplace_back(constructFeatureVector(2, track.trdPattern()));
     }
+    // else {
+    //   // inputValues.push_back(std::numeric_limits<float>::quiet_NaN());
+    //   // inputValues.push_back(std::numeric_limits<float>::quiet_NaN());
+    //   inputValues.push_back(-99.0f);
+    //   inputValues.push_back(-99.0f);
+    //   std::cout << "MISSING_TRD" << std::endl;
+    // }
 
     if (TMath::Abs(track.tofSignal() - kTOFMissingSignal) >= kEpsilon) {
       float scaledTOFSignal = (track.tofSignal() - mScalingParams.at("fTOFSignal").first) / mScalingParams.at("fTOFSignal").second;
       float scaledBeta = (track.beta() - mScalingParams.at("fBeta").first) / mScalingParams.at("fBeta").second;
-      inputValues.push_back(scaledTOFSignal);
-      inputValues.push_back(scaledBeta);
-    } else {
-      inputValues.push_back(std::numeric_limits<float>::quiet_NaN());
-      inputValues.push_back(std::numeric_limits<float>::quiet_NaN());
+      // inputValues.push_back(scaledTOFSignal);
+      // inputValues.push_back(scaledBeta);
+      std::cout << "WITH_TOF" << std::endl;
+      inputValues.emplace_back(constructFeatureVector(3, scaledTOFSignal));
+      inputValues.emplace_back(constructFeatureVector(4, scaledBeta));
     }
+    // else {
+    //   // inputValues.push_back(std::numeric_limits<float>::quiet_NaN());
+    //   // inputValues.push_back(std::numeric_limits<float>::quiet_NaN());
+    //   inputValues.push_back(-99.0f);
+    //   inputValues.push_back(-99.0f);
+    //   std::cout << "MISSING_TOF" << std::endl;
+    // }
 
     float scaledX = (track.x() - mScalingParams.at("fX").first) / mScalingParams.at("fX").second;
     float scaledY = (track.y() - mScalingParams.at("fY").first) / mScalingParams.at("fY").second;
@@ -210,9 +228,33 @@ struct PidONNXModel {
     float scaledDcaXY = (track.dcaXY() - mScalingParams.at("fDcaXY").first) / mScalingParams.at("fDcaXY").second;
     float scaledDcaZ = (track.dcaZ() - mScalingParams.at("fDcaZ").first) / mScalingParams.at("fDcaZ").second;
 
-    inputValues.insert(inputValues.end(), {track.p(), track.pt(), track.px(), track.py(), track.pz(), static_cast<float>(track.sign()), scaledX, scaledY, scaledZ, scaledAlpha, static_cast<float>(track.trackType()), scaledTPCNClsShared, scaledDcaXY, scaledDcaZ});
+    // inputValues.insert(inputValues.end(), {track.p(), track.pt(), track.px(), track.py(), track.pz(), static_cast<float>(track.sign()), scaledX, scaledY, scaledZ, scaledAlpha, static_cast<float>(track.trackType()), scaledTPCNClsShared, scaledDcaXY, scaledDcaZ});
+
+    inputValues.emplace_back(constructFeatureVector(5, track.p()));
+    inputValues.emplace_back(constructFeatureVector(6, track.pt()));
+    inputValues.emplace_back(constructFeatureVector(7, track.px()));
+    inputValues.emplace_back(constructFeatureVector(8, track.py()));
+    inputValues.emplace_back(constructFeatureVector(9, track.pz()));
+    inputValues.emplace_back(constructFeatureVector(10, static_cast<float>(track.sign())));
+    inputValues.emplace_back(constructFeatureVector(11, scaledX));
+    inputValues.emplace_back(constructFeatureVector(12, scaledY));
+    inputValues.emplace_back(constructFeatureVector(13, scaledZ));
+    inputValues.emplace_back(constructFeatureVector(14, scaledAlpha));
+    inputValues.emplace_back(constructFeatureVector(15, static_cast<float>(track.trackType())));
+    inputValues.emplace_back(constructFeatureVector(16, scaledTPCNClsShared));
+    inputValues.emplace_back(constructFeatureVector(17, scaledDcaXY));
+    inputValues.emplace_back(constructFeatureVector(18, scaledDcaZ));
 
     return inputValues;
+  }
+
+  static constexpr std::size_t featureCount = 19;
+  // TODO: performance considerations, maybe some move/reference returning or vector of vectors reference as parameter and emplace_back here.
+  std::vector<float> constructFeatureVector(int32_t i, float value) {
+    std::vector<float> retVec(featureCount + 1, 0.0f);
+    retVec[i] = 1.0f;
+    retVec[featureCount] = value;
+    return retVec;
   }
 
   // FIXME: Temporary solution, new networks will have sigmoid layer added
@@ -226,14 +268,36 @@ struct PidONNXModel {
   float getModelOutput(const T& track)
   {
     auto input_shape = mInputShapes[0];
-    std::vector<float> inputTensorValues = createInputsSingle(track);
+    std::vector<std::vector<float>> inputTensorValues = createInputsSingle(track);
     std::vector<Ort::Value> inputTensors;
-    inputTensors.emplace_back(Ort::Experimental::Value::CreateTensor<float>(inputTensorValues.data(), inputTensorValues.size(), input_shape));
+
+    std::vector<float> oneDimArray;
+    for(auto& feature : inputTensorValues) {
+      for(float f : feature) {
+        oneDimArray.push_back(f);
+      }
+    }
+
+    std::vector<int64_t> input_shape_vector;
+    input_shape_vector.push_back(1);
+    input_shape_vector.push_back(inputTensorValues.size());
+    input_shape_vector.push_back(featureCount + 1);
+
+    Ort::MemoryInfo memory_info{ nullptr };     // Used to allocate memory for input
+    try {
+      memory_info = std::move(Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault));
+    }
+    catch (Ort::Exception& oe) {
+      std::cout << "ONNX exception caught: " << oe.what() << ". Code: " << oe.GetOrtErrorCode() << ".\n";
+      return -1;
+    }
+
+    inputTensors.emplace_back(Ort::Experimental::Value::CreateTensor<float>((float*) oneDimArray.data(), oneDimArray.size(), input_shape_vector));
 
     // Double-check the dimensions of the input tensor
     assert(inputTensors[0].IsTensor() &&
            inputTensors[0].GetTensorTypeAndShapeInfo().GetShape() == input_shape);
-    LOG(debug) << "input tensor shape: " << printShape(inputTensors[0].GetTensorTypeAndShapeInfo().GetShape());
+    LOG(info) << "input tensor shape: " << printShape(inputTensors[0].GetTensorTypeAndShapeInfo().GetShape());
 
     try {
       auto outputTensors = mSession->Run(mInputNames, inputTensors, mOutputNames);
@@ -241,7 +305,7 @@ struct PidONNXModel {
       // Double-check the dimensions of the output tensors
       // The number of output tensors is equal to the number of output nodes specified in the Run() call
       assert(outputTensors.size() == mOutputNames.size() && outputTensors[0].IsTensor());
-      LOG(debug) << "output tensor shape: " << printShape(outputTensors[0].GetTensorTypeAndShapeInfo().GetShape());
+      LOG(info) << "output tensor shape: " << printShape(outputTensors[0].GetTensorTypeAndShapeInfo().GetShape());
 
       const float* output_value = outputTensors[0].GetTensorData<float>();
       float certainty = sigmoid(*output_value); // FIXME: Temporary, sigmoid will be added as network layer
