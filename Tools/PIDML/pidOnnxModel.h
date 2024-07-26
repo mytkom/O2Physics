@@ -215,17 +215,17 @@ struct PidONNXModel {
     return inputValues;
   }
 
-  // FIXME: Temporary solution, new networks will have sigmoid layer added
-  float sigmoid(float x)
-  {
-    float value = std::max(-100.0f, std::min(100.0f, x));
-    return 1.0f / (1.0f + std::exp(-value));
-  }
-
   template <typename T>
   float getModelOutput(const T& track)
   {
+    // First rank of the expected model input is -1 which means that it is dynamic axis.
+    // Axis is exported as dynamic to make it possible to run model inference with the batch of
+    // tracks at once in the future (batch would need to have the same amount of quiet_NaNs in each row).
+    // For now we hardcode 1.
+    static constexpr int64_t batch_size = 1;
     auto input_shape = mInputShapes[0];
+    input_shape[0] = batch_size;
+
     std::vector<float> inputTensorValues = createInputsSingle(track);
     std::vector<Ort::Value> inputTensors;
     inputTensors.emplace_back(Ort::Experimental::Value::CreateTensor<float>(inputTensorValues.data(), inputTensorValues.size(), input_shape));
@@ -244,7 +244,7 @@ struct PidONNXModel {
       LOG(debug) << "output tensor shape: " << printShape(outputTensors[0].GetTensorTypeAndShapeInfo().GetShape());
 
       const float* output_value = outputTensors[0].GetTensorData<float>();
-      float certainty = sigmoid(*output_value); // FIXME: Temporary, sigmoid will be added as network layer
+      float certainty = *output_value;
       return certainty;
     } catch (const Ort::Exception& exception) {
       LOG(error) << "Error running model inference: " << exception.what();
