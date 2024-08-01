@@ -170,6 +170,7 @@ struct PidONNXModel {
   }
 
   static constexpr float kTOFMissingSignal = -999.0f;
+  static constexpr float kTOFPCut = 0.5f;
   static constexpr float kTRDMissingSignal = 0.0f;
   static constexpr float kEpsilon = 1e-10f;
 
@@ -192,7 +193,7 @@ struct PidONNXModel {
       inputValues.push_back(std::numeric_limits<float>::quiet_NaN());
     }
 
-    if (TMath::Abs(track.tofSignal() - kTOFMissingSignal) >= kEpsilon) {
+    if (track.p() >= kTOFPCut && TMath::Abs(track.tofSignal() - kTOFMissingSignal) >= kEpsilon) {
       float scaledTOFSignal = (track.tofSignal() - mScalingParams.at("fTOFSignal").first) / mScalingParams.at("fTOFSignal").second;
       float scaledBeta = (track.beta() - mScalingParams.at("fBeta").first) / mScalingParams.at("fBeta").second;
       inputValues.push_back(scaledTOFSignal);

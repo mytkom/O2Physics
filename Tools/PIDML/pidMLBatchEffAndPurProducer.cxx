@@ -54,7 +54,7 @@ struct PidMlBatchEffAndPurProducer {
   int currentRunNumber = -1;
   static constexpr float kEpsilon = 1e-10;
   static constexpr float kEtaCut = 0.8f;
-  static constexpr float kNSigmaTofPtCut = 0.5f;
+  static constexpr float kNSigmaTofPCut = 0.5f;
   static constexpr float kTofMissing = -999.0f;
   static constexpr int kNPids = 6;
   static constexpr int kPids[kNPids] = {211, 321, 2212, -211, -321, -2212};
@@ -205,7 +205,7 @@ struct PidMlBatchEffAndPurProducer {
         break;
     }
 
-    if (track.pt() < kNSigmaTofPtCut || TMath::Abs(track.tofSignal() - kTofMissing) < kEpsilon) {
+    if (track.p() < kNSigmaTofPCut || TMath::Abs(track.tofSignal() - kTofMissing) < kEpsilon) {
       nSigma.composed = TMath::Abs(nSigma.tpc);
     } else {
       nSigma.composed = TMath::Hypot(nSigma.tof, nSigma.tpc);

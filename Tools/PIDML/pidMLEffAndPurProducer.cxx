@@ -35,7 +35,7 @@ struct PidMlEffAndPurProducer {
   PidONNXModel pidModel; // One instance per model, e.g., one per each pid to predict
   Configurable<int> cfgPid{"pid", 211, "PID to predict"};
   Configurable<double> cfgNSigmaCut{"n-sigma-cut", 3.0f, "TPC and TOF PID nSigma cut"};
-  Configurable<double> cfgTofPtCut{"tof-pt-cut", 0.5f, "From what pT TOF is used"};
+  Configurable<double> cfgTofPCut{"tof-p-cut", 0.5f, "From what p TOF is used"};
   Configurable<double> cfgCertainty{"certainty", 0.5, "Min certainty of the model to accept given mcPart to be of given kind"};
 
   Configurable<std::string> cfgPathCCDB{"ccdb-path", "Users/m/mkabus/PIDML", "base path to the CCDB directory with ONNX models"};
@@ -100,7 +100,7 @@ struct PidMlEffAndPurProducer {
     if (track.sign() != sign)
       return false;
 
-    if (track.pt() < cfgTofPtCut || TMath::Abs(track.tofSignal() - kTOFMissingSignal) < kEpsilon) {
+    if (track.p() < cfgTofPCut || TMath::Abs(track.tofSignal() - kTOFMissingSignal) < kEpsilon) {
       if (TMath::Abs(nSigma.tpc) >= cfgNSigmaCut)
         return false;
     } else {
@@ -121,6 +121,7 @@ struct PidMlEffAndPurProducer {
     }
 
     const AxisSpec axisPt{100, 0, 5.0, "pt"};
+    const AxisSpec axisP{100, 0, 5.0, "p"};
     const AxisSpec axisBeta{100, 0, 1.0, "beta"};
     const AxisSpec axisTPCSignal{100, 0, 120.0, "dEdx"};
     const AxisSpec axisNSigma{100, -5.0, 5.0, "n-sigma"};
@@ -138,13 +139,13 @@ struct PidMlEffAndPurProducer {
     histos.add("hPtNSigmaTruePositive", "hPtNSigmaTruePositive", kTH1F, {axisPt});
 
     // Context detectors' data
-    histos.add("full/hPtTOFBeta", "full/hPtTOFBeta", kTH2F, {axisPt, axisBeta});
-    histos.add("full/hPtTPCSignal", "full/hPtTPCSignal", kTH2F, {axisPt, axisTPCSignal});
-    histos.add("full/hPtTOFNSigma", "full/hPtTOFNSigma", kTH2F, {axisPt, axisNSigma});
-    histos.add("full/hPtTPCNSigma", "full/hPtTPCNSigma", kTH2F, {axisPt, axisNSigma});
+    histos.add("full/hPtTOFBeta", "full/hPtTOFBeta", kTH2F, {axisP, axisBeta});
+    histos.add("full/hPtTPCSignal", "full/hPtTPCSignal", kTH2F, {axisP, axisTPCSignal});
+    histos.add("full/hPtTOFNSigma", "full/hPtTOFNSigma", kTH2F, {axisP, axisNSigma});
+    histos.add("full/hPtTPCNSigma", "full/hPtTPCNSigma", kTH2F, {axisP, axisNSigma});
 
-    histos.add("hPtTOFNSigma", "hPtTOFNSigma", kTH2F, {axisPt, axisNSigma});
-    histos.add("hPtTPCNSigma", "hPtTPCNSigma", kTH2F, {axisPt, axisNSigma});
+    histos.add("hPtTOFNSigma", "hPtTOFNSigma", kTH2F, {axisP, axisNSigma});
+    histos.add("hPtTPCNSigma", "hPtTPCNSigma", kTH2F, {axisP, axisNSigma});
   }
 
   void process(aod::Collisions const& collisions, BigTracks const& tracks, aod::BCsWithTimestamps const&, aod::McParticles const& mcParticles)
@@ -175,8 +176,8 @@ struct PidMlEffAndPurProducer {
                track.collisionId(), track.index(), mlAccepted, nSigmaAccepted, track.p(), track.x(), track.y(), track.z());
 
           if (mcPart.pdgCode() == pidModel.mPid) {
-            histos.fill(HIST("full/hPtTOFNSigma"), track.pt(), nSigma.tof);
-            histos.fill(HIST("full/hPtTPCNSigma"), track.pt(), nSigma.tpc);
+            histos.fill(HIST("full/hPtTOFNSigma"), track.p(), nSigma.tof);
+            histos.fill(HIST("full/hPtTPCNSigma"), track.p(), nSigma.tpc);
             histos.fill(HIST("hPtMCTracked"), track.pt());
           }
 
@@ -191,8 +192,8 @@ struct PidMlEffAndPurProducer {
           }
 
           if (nSigmaAccepted) {
-            histos.fill(HIST("hPtTOFNSigma"), track.pt(), nSigma.tof);
-            histos.fill(HIST("hPtTPCNSigma"), track.pt(), nSigma.tpc);
+            histos.fill(HIST("hPtTOFNSigma"), track.p(), nSigma.tof);
+            histos.fill(HIST("hPtTPCNSigma"), track.p(), nSigma.tpc);
 
             if (mcPart.pdgCode() == pidModel.mPid) {
               histos.fill(HIST("hPtNSigmaTruePositive"), track.pt());
