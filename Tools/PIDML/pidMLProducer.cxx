@@ -129,7 +129,7 @@ struct PidMlProducer {
   void fillHistSignMC(const T& track, uint32_t pdgCode, uint8_t isPrimary)
   {
     fillHistSign<prefixInd>(const T& track)
-    registry.fill(HIST(Form("%s/hPdgCode", histPrefixes[prefixInd])), pdgCode);
+      registry.fill(HIST(Form("%s/hPdgCode", histPrefixes[prefixInd])), pdgCode);
     registry.fill(HIST(Form("%s/hIsPrimary", histPrefixes[prefixInd])), isPrimary);
   }
 
