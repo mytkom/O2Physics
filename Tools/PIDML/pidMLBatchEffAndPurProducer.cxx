@@ -106,11 +106,11 @@ struct PidMlBatchEffAndPurProducer {
   {
     std::optional<size_t> ret;
 
-    if(std::find(cfgPids.begin(), cfgPids.end(), pdgCode) == cfgPids.end()) {
+    if (std::find(cfgPids.begin(), cfgPids.end(), pdgCode) == cfgPids.end()) {
       return ret;
     }
 
-    switch(pdgCode) {
+    switch (pdgCode) {
       case 2212:
         ret = 0;
         break;
@@ -137,7 +137,7 @@ struct PidMlBatchEffAndPurProducer {
   void fillTrackedHist(int32_t pdgCode, float pt)
   {
     auto ind = getPartIndex(pdgCode);
-    if(ind) {
+    if (ind) {
       hTracked[ind.value()]->Fill(pt);
     }
   }
@@ -145,7 +145,7 @@ struct PidMlBatchEffAndPurProducer {
   void fillMCPositiveHist(int32_t pdgCode, float pt)
   {
     auto ind = getPartIndex(pdgCode);
-    if(ind) {
+    if (ind) {
       hMCPositive[ind.value()]->Fill(pt);
     }
   }
