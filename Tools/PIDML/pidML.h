@@ -19,6 +19,8 @@
 
 #include "Framework/AnalysisDataModel.h"
 #include "Common/DataModel/PIDResponse.h"
+#include "Common/DataModel/Multiplicity.h"
+#include "Common/DataModel/Centrality.h"
 
 namespace o2::aod
 {
@@ -27,10 +29,10 @@ namespace pidtracks
 DECLARE_SOA_COLUMN(MultFV0M, multFV0M, float);                     //! Non-dynamic column with V0 multiplicity
 DECLARE_SOA_COLUMN(MultFT0M, multFT0M, float);                     //! Non-dynamic column with T0 multiplicity
 DECLARE_SOA_COLUMN(P, p, float);                                   //! Non-dynamic column with track momentum
-DECLARE_SOA_COLUMN(Px, px, float);                                 //! Non-dynamic column with track x-momentum
-DECLARE_SOA_COLUMN(Py, py, float);                                 //! Non-dynamic column with track y-momentum
-DECLARE_SOA_COLUMN(Pz, pz, float);                                 //! Non-dynamic column with track z-momentum
-DECLARE_SOA_COLUMN(Sign, sign, float);                             //! Non-dynamic column with track sign
+DECLARE_SOA_COLUMN_FULL(StaticPx, staticPx, float, "fPx");                                 //! Non-dynamic column with track x-momentum
+DECLARE_SOA_COLUMN_FULL(StaticPy, staticPy, float, "fPy");                                 //! Non-dynamic column with track y-momentum
+DECLARE_SOA_COLUMN_FULL(StaticPz, staticPz, float, "fPz");                                 //! Non-dynamic column with track z-momentum
+DECLARE_SOA_COLUMN_FULL(StaticSign, staticSign, float, "fSign");                             //! Non-dynamic column with track sign
 DECLARE_SOA_COLUMN(IsPhysicalPrimary, isPhysicalPrimary, uint8_t); //!
 DECLARE_SOA_COLUMN(TOFExpSignalDiffEl, tofExpSignalDiffEl, float); //! Difference between signal and expected for electron
 DECLARE_SOA_COLUMN(TPCExpSignalDiffEl, tpcExpSignalDiffEl, float); //! Difference between signal and expected for electron
@@ -43,6 +45,11 @@ DECLARE_SOA_COLUMN(TPCExpSignalDiffKa, tpcExpSignalDiffKa, float); //! Differenc
 DECLARE_SOA_COLUMN(TOFExpSignalDiffPr, tofExpSignalDiffPr, float); //! Difference between signal and expected for proton
 DECLARE_SOA_COLUMN(TPCExpSignalDiffPr, tpcExpSignalDiffPr, float); //! Difference between signal and expected for proton
 } // namespace pidtracks
+DECLARE_SOA_TABLE(PidTracksMlExtendStatic, "AOD", "PIDMLEXTSTATIC", //! Dynamic columns -> static columns
+                  pidtracks::StaticPx,
+                  pidtracks::StaticPy,
+                  pidtracks::StaticPz,
+                  pidtracks::StaticSign);
 DECLARE_SOA_TABLE(PidTracksDataMl, "AOD", "PIDTRACKSDATAML", //! Data tracks for prediction and domain adaptation
                   aod::track::TPCSignal,
                   aod::track::TRDSignal, aod::track::TRDPattern,
@@ -50,10 +57,10 @@ DECLARE_SOA_TABLE(PidTracksDataMl, "AOD", "PIDTRACKSDATAML", //! Data tracks for
                   aod::pidtofbeta::Beta,
                   pidtracks::P,
                   aod::track::Pt,
-                  pidtracks::Px,
-                  pidtracks::Py,
-                  pidtracks::Pz,
-                  pidtracks::Sign,
+                  pidtracks::StaticPx,
+                  pidtracks::StaticPy,
+                  pidtracks::StaticPz,
+                  pidtracks::StaticSign,
                   aod::track::X,
                   aod::track::Y,
                   aod::track::Z,
@@ -76,10 +83,10 @@ DECLARE_SOA_TABLE(PidTracksData, "AOD", "PIDTRACKSDATA", //! Data tracks for com
                   aod::pidtofbeta::Beta,
                   pidtracks::P,
                   aod::track::Pt,
-                  pidtracks::Px,
-                  pidtracks::Py,
-                  pidtracks::Pz,
-                  pidtracks::Sign,
+                  pidtracks::StaticPx,
+                  pidtracks::StaticPy,
+                  pidtracks::StaticPz,
+                  pidtracks::StaticSign,
                   aod::track::X,
                   aod::track::Y,
                   aod::track::Z,
@@ -125,10 +132,10 @@ DECLARE_SOA_TABLE(PidTracksMcMl, "AOD", "PIDTRACKSMCML", //! MC tracks for train
                   aod::pidtofbeta::Beta,
                   pidtracks::P,
                   aod::track::Pt,
-                  pidtracks::Px,
-                  pidtracks::Py,
-                  pidtracks::Pz,
-                  pidtracks::Sign,
+                  pidtracks::StaticPx,
+                  pidtracks::StaticPy,
+                  pidtracks::StaticPz,
+                  pidtracks::StaticSign,
                   aod::track::X,
                   aod::track::Y,
                   aod::track::Z,
@@ -153,10 +160,10 @@ DECLARE_SOA_TABLE(PidTracksMc, "AOD", "PIDTRACKSMC", //! MC tracks for comparati
                   aod::pidtofbeta::Beta,
                   pidtracks::P,
                   aod::track::Pt,
-                  pidtracks::Px,
-                  pidtracks::Py,
-                  pidtracks::Pz,
-                  pidtracks::Sign,
+                  pidtracks::StaticPx,
+                  pidtracks::StaticPy,
+                  pidtracks::StaticPz,
+                  pidtracks::StaticSign,
                   aod::track::X,
                   aod::track::Y,
                   aod::track::Z,

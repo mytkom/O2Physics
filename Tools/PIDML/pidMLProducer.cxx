@@ -41,6 +41,8 @@ struct PidMlProducer {
   Produces<aod::PidTracksData> pidTracksTableData;
   Produces<aod::PidTracksMcMl> pidTracksTableMCML;
   Produces<aod::PidTracksMc> pidTracksTableMC;
+  Produces<aod::PidTracksMlExtendStatic> pidTracksTableMLExtendStatic;
+
 
   Filter trackFilter = requireGlobalTrackInFilter();
 
@@ -189,6 +191,18 @@ struct PidMlProducer {
       initHistSign<1>();
     }
   }
+
+  void processStaticColumnsML(aod::Collisions const& /*collision*/, soa::Join<aod::Tracks, aod::TracksDCA> const& tracks)
+  {
+    pidTracksTableMLExtendStatic.reserve(tracks.size());
+
+    for (const auto& track : tracks) {
+      pidTracksTableMLExtendStatic(track.px(), track.py(), track.pz(), track.sign());
+
+      // fillHist(track);
+    }
+  }
+  PROCESS_SWITCH(PidMlProducer, processStaticColumnsML, "Produce static columns for ML inference", true);
 
   void processDataML(MyCollisionML const& /*collision*/, BigTracksDataML const& tracks)
   {

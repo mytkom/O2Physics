@@ -15,6 +15,7 @@
 /// \author Michał Olędzki <m.oledzki@cern.ch>
 /// \author Marek Mytkowski <marek.mytkowski@cern.ch>
 
+#include <algorithm>
 #include <string>
 
 #include "Framework/AnalysisDataModel.h"
@@ -26,6 +27,7 @@
 #include "Tools/PIDML/pidOnnxModel.h"
 #include "pidOnnxModel.h"
 #include "Tools/PIDML/pidUtils.h"
+#include "Tools/PIDML/pidML.h"
 
 using namespace o2;
 using namespace o2::framework;
@@ -54,7 +56,7 @@ struct PidMlEffAndPurProducer {
 
   Filter trackFilter = requireGlobalTrackInFilter();
 
-  using BigTracks = soa::Filtered<soa::Join<aod::FullTracks, aod::TracksDCA, aod::pidTOFbeta, aod::TrackSelection, aod::TOFSignal, aod::McTrackLabels,
+  using BigTracks = soa::Filtered<soa::Join<aod::FullTracks, aod::PidTracksMlExtendStatic, aod::TracksDCA, aod::pidTOFbeta, aod::TrackSelection, aod::TOFSignal, aod::McTrackLabels,
                                             aod::pidTPCFullPi, aod::pidTPCFullKa, aod::pidTPCFullPr, aod::pidTPCFullEl, aod::pidTPCFullMu,
                                             aod::pidTOFFullPi, aod::pidTOFFullKa, aod::pidTOFFullPr, aod::pidTOFFullEl, aod::pidTOFFullMu>>;
 
@@ -150,59 +152,63 @@ struct PidMlEffAndPurProducer {
 
   void process(aod::Collisions const& collisions, BigTracks const& tracks, aod::BCsWithTimestamps const&, aod::McParticles const& mcParticles)
   {
-    auto bc = collisions.iteratorAt(0).bc_as<aod::BCsWithTimestamps>();
-    if (cfgUseCCDB && bc.runNumber() != currentRunNumber) {
-      uint64_t timestamp = cfgUseFixedTimestamp ? cfgTimestamp.value : bc.timestamp();
-      pidModel = PidONNXModel(cfgPathLocal.value, cfgPathCCDB.value, cfgUseCCDB.value, ccdbApi, timestamp,
-                              cfgPid.value, cfgCertainty.value, &cfgDetectorsPLimits.value[0]);
-    }
+    auto outputs = pidModel.getModelOutputsGandiva(tracks);
+    LOG(info) << "tracks count: " << outputs;
 
-    for (auto& mcPart : mcParticles) {
-      // eta cut is included in requireGlobalTrackInFilter() so we cut it only here
-      if (mcPart.isPhysicalPrimary() && TMath::Abs(mcPart.eta()) < kGlobalEtaCut && mcPart.pdgCode() == pidModel.mPid) {
-        histos.fill(HIST("hPtMCPositive"), mcPart.pt());
-      }
-    }
+    // auto bc = collisions.iteratorAt(0).bc_as<aod::BCsWithTimestamps>();
+    // if (cfgUseCCDB && bc.runNumber() != currentRunNumber) {
+    //   uint64_t timestamp = cfgUseFixedTimestamp ? cfgTimestamp.value : bc.timestamp();
+    //   pidModel = PidONNXModel(cfgPathLocal.value, cfgPathCCDB.value, cfgUseCCDB.value, ccdbApi, timestamp,
+    //                           cfgPid.value, cfgCertainty.value, &cfgDetectorsPLimits.value[0]);
+    // }
 
-    for (auto& track : tracks) {
-      if (track.has_mcParticle()) {
-        auto mcPart = track.mcParticle();
-        if (mcPart.isPhysicalPrimary()) {
-          bool mlAccepted = pidModel.applyModelBoolean(track);
-          nSigma_t nSigma = GetNSigma(track);
-          bool nSigmaAccepted = IsNSigmaAccept(track, nSigma);
+    // for (auto& mcPart : mcParticles) {
+    //   // eta cut is included in requireGlobalTrackInFilter() so we cut it only here
+    //   if (mcPart.isPhysicalPrimary() && TMath::Abs(mcPart.eta()) < kGlobalEtaCut && mcPart.pdgCode() == pidModel.mPid) {
+    //     histos.fill(HIST("hPtMCPositive"), mcPart.pt());
+    //   }
+    // }
 
-          LOGF(debug, "collision id: %d track id: %d mlAccepted: %d nSigmaAccepted: %d p: %.3f; x: %.3f, y: %.3f, z: %.3f",
-               track.collisionId(), track.index(), mlAccepted, nSigmaAccepted, track.p(), track.x(), track.y(), track.z());
+    // for (auto& track : tracks) {
+    //   if (track.has_mcParticle()) {
+    //     auto mcPart = track.mcParticle();
+    //     if (mcPart.isPhysicalPrimary()) {
 
-          if (mcPart.pdgCode() == pidModel.mPid) {
-            histos.fill(HIST("full/hPtTOFNSigma"), track.p(), nSigma.tof);
-            histos.fill(HIST("full/hPtTPCNSigma"), track.p(), nSigma.tpc);
-            histos.fill(HIST("hPtMCTracked"), track.pt());
-          }
+    //       bool mlAccepted = pidModel.applyModelBoolean(tracks, track);
+    //       nSigma_t nSigma = GetNSigma(track);
+    //       bool nSigmaAccepted = IsNSigmaAccept(track, nSigma);
 
-          histos.fill(HIST("full/hPtTOFBeta"), track.pt(), track.beta());
-          histos.fill(HIST("full/hPtTPCSignal"), track.pt(), track.tpcSignal());
+    //       LOGF(debug, "collision id: %d track id: %d mlAccepted: %d nSigmaAccepted: %d p: %.3f; x: %.3f, y: %.3f, z: %.3f",
+    //            track.collisionId(), track.index(), mlAccepted, nSigmaAccepted, track.p(), track.x(), track.y(), track.z());
 
-          if (mlAccepted) {
-            if (mcPart.pdgCode() == pidModel.mPid) {
-              histos.fill(HIST("hPtMLTruePositive"), track.pt());
-            }
-            histos.fill(HIST("hPtMLPositive"), track.pt());
-          }
+    //       if (mcPart.pdgCode() == pidModel.mPid) {
+    //         histos.fill(HIST("full/hPtTOFNSigma"), track.p(), nSigma.tof);
+    //         histos.fill(HIST("full/hPtTPCNSigma"), track.p(), nSigma.tpc);
+    //         histos.fill(HIST("hPtMCTracked"), track.pt());
+    //       }
 
-          if (nSigmaAccepted) {
-            histos.fill(HIST("hPtTOFNSigma"), track.p(), nSigma.tof);
-            histos.fill(HIST("hPtTPCNSigma"), track.p(), nSigma.tpc);
+    //       histos.fill(HIST("full/hPtTOFBeta"), track.pt(), track.beta());
+    //       histos.fill(HIST("full/hPtTPCSignal"), track.pt(), track.tpcSignal());
 
-            if (mcPart.pdgCode() == pidModel.mPid) {
-              histos.fill(HIST("hPtNSigmaTruePositive"), track.pt());
-            }
-            histos.fill(HIST("hPtNSigmaPositive"), track.pt());
-          }
-        }
-      }
-    }
+    //       if (mlAccepted) {
+    //         if (mcPart.pdgCode() == pidModel.mPid) {
+    //           histos.fill(HIST("hPtMLTruePositive"), track.pt());
+    //         }
+    //         histos.fill(HIST("hPtMLPositive"), track.pt());
+    //       }
+
+    //       if (nSigmaAccepted) {
+    //         histos.fill(HIST("hPtTOFNSigma"), track.p(), nSigma.tof);
+    //         histos.fill(HIST("hPtTPCNSigma"), track.p(), nSigma.tpc);
+
+    //         if (mcPart.pdgCode() == pidModel.mPid) {
+    //           histos.fill(HIST("hPtNSigmaTruePositive"), track.pt());
+    //         }
+    //         histos.fill(HIST("hPtNSigmaPositive"), track.pt());
+    //       }
+    //     }
+    //   }
+    // }
   }
 };
 
