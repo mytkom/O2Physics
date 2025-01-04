@@ -75,7 +75,7 @@ add_subdirectory(PWGDQ)
 
 add_subdirectory(Tools)
 # add_subdirectory(Tutorials)
-# add_subdirectory(EventFiltering)
+add_subdirectory(EventFiltering)
 # 
 # add_subdirectory(Scripts)
 
