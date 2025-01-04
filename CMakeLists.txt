@@ -65,7 +65,7 @@ add_subdirectory(Common)
 # add_subdirectory(DPG)
 # 
 # add_subdirectory(PWGCF)
-# add_subdirectory(PWGDQ)
+add_subdirectory(PWGDQ)
 # add_subdirectory(PWGEM)
 # add_subdirectory(PWGHF)
 # add_subdirectory(PWGJE)
